@@ -109,8 +109,23 @@ Eventi tracciati:
 - `waitlist_submitted`
 - `thought_created`
 - `task_completed`
+- `reminder_scheduled`
 - `pricing_viewed`
 - `onboarding_completed`
+
+## Promemoria e Notifiche
+
+Parla supporta notifiche locali browser per task con `dueHint`, per esempio `domani`, `stasera`, `alle 18`.
+
+Come provarle:
+
+1. Apri `/app`.
+2. Crea un pensiero tipo `Ricordami di chiamare Marco alle 18`.
+3. Apri il dettaglio della nota.
+4. Premi `Attiva notifica` sul task.
+5. Concedi il permesso notifiche al browser.
+
+Limite MVP: le notifiche sono programmate localmente nel browser e sono affidabili mentre l'app/PWA resta attiva. Per promemoria robusti anche ad app chiusa servono Push API, service worker push, backend e scheduler.
 
 ## Deploy su Vercel
 
@@ -177,4 +192,5 @@ Fase 3:
 - AI opzionale via `VITE_AI_ENDPOINT`.
 - Fallback locale sempre disponibile.
 - Dettatura vocale via Web Speech API nei browser compatibili, con input manuale e fallback demo.
+- Notifiche locali browser per promemoria, con limite MVP senza backend.
 - UI mobile-first con pagine marketing e app separata.

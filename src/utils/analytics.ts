@@ -3,6 +3,7 @@ export type AnalyticsEventName =
   | "waitlist_submitted"
   | "thought_created"
   | "task_completed"
+  | "reminder_scheduled"
   | "pricing_viewed"
   | "onboarding_completed";
 

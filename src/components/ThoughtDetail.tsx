@@ -5,10 +5,14 @@ import {
   CheckCircle2,
   Flag,
   HeartPulse,
+  Bell,
   Sparkles,
   Trash2,
 } from "lucide-react";
+import { useState } from "react";
 import type { Thought } from "../types/Thought";
+import { scheduleTaskReminder } from "../utils/reminders";
+import { trackEvent } from "../utils/analytics";
 
 const PRIORITY_LABELS = {
   low: "bassa",
@@ -44,6 +48,35 @@ export function ThoughtDetail({
   onDelete,
   onToggleTask,
 }: ThoughtDetailProps) {
+  const [reminderMessage, setReminderMessage] = useState<string | null>(null);
+
+  async function handleScheduleReminder(taskId: string) {
+    const task = thought.tasks.find((item) => item.id === taskId);
+
+    if (!task) {
+      return;
+    }
+
+    const result = await scheduleTaskReminder(task);
+
+    if (!result.ok) {
+      setReminderMessage(result.reason);
+      return;
+    }
+
+    trackEvent("reminder_scheduled", {
+      dueHint: task.dueHint ?? "",
+      priority: task.priority ?? "low",
+    });
+
+    setReminderMessage(
+      `Notifica attiva per ${new Intl.DateTimeFormat("it-IT", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }).format(result.scheduledFor)}.`
+    );
+  }
+
   return (
     <section className="space-y-4">
       <button
@@ -108,48 +141,70 @@ export function ThoughtDetail({
             <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-ink-500">
               Task estratti
             </h3>
+            {reminderMessage && (
+              <p className="mt-3 rounded-2xl bg-mint-100 px-4 py-3 text-sm font-medium text-mint-700">
+                {reminderMessage}
+              </p>
+            )}
             <div className="mt-3 space-y-2">
               {thought.tasks.map((task) => (
-                <button
+                <div
                   key={task.id}
-                  type="button"
-                  onClick={() => onToggleTask(thought.id, task.id)}
-                  className="tap flex w-full items-center gap-3 rounded-2xl border border-ink-100 bg-ink-50 px-4 py-3 text-left"
+                  className="rounded-2xl border border-ink-100 bg-ink-50 px-4 py-3"
                 >
-                  <CheckCircle2
-                    size={20}
-                    className={task.completed ? "text-mint-700" : "text-ink-500"}
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span
-                      className={`block text-sm font-medium ${
-                        task.completed
-                          ? "text-ink-500 line-through"
-                          : "text-ink-900"
-                      }`}
+                  <div className="flex items-start gap-3">
+                    <button
+                      type="button"
+                      onClick={() => onToggleTask(thought.id, task.id)}
+                      className="tap mt-0.5 shrink-0"
+                      aria-label="Segna task completato"
                     >
-                      {task.title}
-                    </span>
-                    {(task.dueHint || task.priority) && (
-                      <span className="mt-2 flex flex-wrap gap-2">
-                        {task.dueHint && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1 text-xs font-medium text-ink-500">
-                            <CalendarClock size={13} />
-                            {task.dueHint}
-                          </span>
-                        )}
-                        {task.priority && (
-                          <span
-                            className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${PRIORITY_STYLE[task.priority]}`}
-                          >
-                            <Flag size={13} />
-                            {PRIORITY_LABELS[task.priority]}
-                          </span>
-                        )}
+                      <CheckCircle2
+                        size={20}
+                        className={task.completed ? "text-mint-700" : "text-ink-500"}
+                      />
+                    </button>
+                    <span className="min-w-0 flex-1">
+                      <span
+                        className={`block text-sm font-medium ${
+                          task.completed
+                            ? "text-ink-500 line-through"
+                            : "text-ink-900"
+                        }`}
+                      >
+                        {task.title}
                       </span>
-                    )}
-                  </span>
-                </button>
+                      {(task.dueHint || task.priority) && (
+                        <span className="mt-2 flex flex-wrap gap-2">
+                          {task.dueHint && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1 text-xs font-medium text-ink-500">
+                              <CalendarClock size={13} />
+                              {task.dueHint}
+                            </span>
+                          )}
+                          {task.priority && (
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${PRIORITY_STYLE[task.priority]}`}
+                            >
+                              <Flag size={13} />
+                              {PRIORITY_LABELS[task.priority]}
+                            </span>
+                          )}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  {task.dueHint && !task.completed && (
+                    <button
+                      type="button"
+                      onClick={() => handleScheduleReminder(task.id)}
+                      className="tap mt-3 inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:text-mint-700"
+                    >
+                      <Bell size={14} />
+                      Attiva notifica
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
           </div>
