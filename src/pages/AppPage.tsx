@@ -3,13 +3,20 @@ import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Dashboard } from "../components/Dashboard";
 import { Filters } from "../components/Filters";
+import { FounderLab } from "../components/founder/FounderLab";
 import { MentalSummary } from "../components/MentalSummary";
 import { OnboardingModal } from "../components/onboarding/OnboardingModal";
+import { PlanBadge } from "../components/PlanBadge";
+import { PlanSwitcher } from "../components/PlanSwitcher";
+import { ProInsights } from "../components/pro/ProInsights";
 import { PWAInstallButton } from "../components/PWAInstallButton";
+import { SmartSuggestions } from "../components/pro/SmartSuggestions";
 import { ThoughtDetail } from "../components/ThoughtDetail";
 import { VoiceRecorder } from "../components/VoiceRecorder";
+import { usePlan } from "../hooks/usePlan";
 import { useThoughts } from "../hooks/useThoughts";
 import type { ThoughtStatus } from "../types/Thought";
+import { hasPlanAccess } from "../utils/plans";
 
 type ActiveFilter = ThoughtStatus | "tutte";
 
@@ -20,6 +27,7 @@ function hasCompletedOnboarding() {
 export function AppPage() {
   const { thoughts, error, isAnalyzing, addThought, deleteThought, toggleTask } =
     useThoughts();
+  const { plan, setPlan } = usePlan();
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("tutte");
   const [search, setSearch] = useState("");
   const [selectedThoughtId, setSelectedThoughtId] = useState<string | null>(null);
@@ -77,6 +85,7 @@ export function AppPage() {
           Parla
         </Link>
         <div className="flex items-center gap-2">
+          <PlanBadge plan={plan} />
           <PWAInstallButton />
           <Link
             to="/pricing"
@@ -95,7 +104,10 @@ export function AppPage() {
               {error}
             </div>
           )}
+          <PlanSwitcher activePlan={plan} onPlanChange={setPlan} />
           <MentalSummary thoughts={thoughts} />
+          {hasPlanAccess(plan, "pro") && <ProInsights thoughts={thoughts} />}
+          {hasPlanAccess(plan, "founder") && <FounderLab thoughts={thoughts} />}
         </div>
 
         <div className="space-y-5">
@@ -108,6 +120,7 @@ export function AppPage() {
             />
           ) : (
             <>
+              {hasPlanAccess(plan, "pro") && <SmartSuggestions thoughts={thoughts} />}
               <Filters
                 activeFilter={activeFilter}
                 search={search}

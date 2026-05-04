@@ -71,6 +71,23 @@ AI_PROVIDER_URL=...
 
 Gli esempi backend sono in `src/server-example/`.
 
+## Versioni Free, Pro e Founder
+
+Parla include tre piani dimostrativi:
+
+- Free: note base, task extraction e ricerca.
+- Pro: insight avanzati, suggerimenti smart, riepilogo mentale piu' ricco.
+- Founder: laboratorio early access, export JSON, feature sperimentali e roadmap voting.
+
+In questa versione il piano viene salvato in LocalStorage con chiave `parla:plan`. Dalla pagina `/pricing` puoi attivare una demo di Free, Pro o Founder senza pagamento reale.
+
+Per un lancio commerciale servono:
+
+- account utente;
+- checkout Stripe, Lemon Squeezy o Paddle;
+- controllo piano lato backend;
+- webhooks per aggiornare lo stato abbonamento.
+
 ## Waitlist
 
 La waitlist salva i dati in LocalStorage con chiave `parla:waitlist`.
@@ -135,6 +152,7 @@ Fase 1:
 
 - MVP + landing + waitlist
 - pricing pubblico
+- demo Free, Pro e Founder
 - analytics locale
 - onboarding iniziale
 
