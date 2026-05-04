@@ -2,7 +2,7 @@
 
 **Parla. Il resto succede.**
 
-Parla e' una web app mobile-first che trasforma pensieri vocali o testuali in note, task, idee e promemoria. L'MVP usa React, TypeScript, Vite, Tailwind CSS, LocalStorage e un layer AI-ready con fallback locale.
+Parla e' una web app mobile-first che trasforma pensieri vocali o testuali in note, task, idee e promemoria. L'MVP usa React, TypeScript, Vite, Tailwind CSS, LocalStorage, riconoscimento vocale del browser quando disponibile e un layer AI-ready con fallback locale.
 
 ## Prodotto
 
@@ -158,4 +158,5 @@ Fase 3:
 - LocalStorage compatibile con le note gia' create.
 - AI opzionale via `VITE_AI_ENDPOINT`.
 - Fallback locale sempre disponibile.
+- Dettatura vocale via Web Speech API nei browser compatibili, con input manuale e fallback demo.
 - UI mobile-first con pagine marketing e app separata.

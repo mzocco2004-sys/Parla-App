@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { Mic, Send, Square, Wand2 } from "lucide-react";
+import { AlertCircle, Mic, Send, Square, Wand2 } from "lucide-react";
 
 const MOCK_TRANSCRIPTS = [
   "Domani devo fare la spesa e chiamare il commercialista",
@@ -17,13 +17,20 @@ export function VoiceRecorder({ onSave, isAnalyzing = false }: VoiceRecorderProp
   const [isRecording, setIsRecording] = useState(false);
   const [manualText, setManualText] = useState("");
   const [lastTranscript, setLastTranscript] = useState<string | null>(null);
+  const [liveTranscript, setLiveTranscript] = useState("");
+  const [recorderMessage, setRecorderMessage] = useState<string | null>(null);
   const timerRef = useRef<number | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const finalTranscriptRef = useRef("");
+  const liveTranscriptRef = useRef("");
+  const shouldSaveOnEndRef = useRef(false);
 
   useEffect(() => {
     return () => {
       if (timerRef.current) {
         window.clearTimeout(timerRef.current);
       }
+      recognitionRef.current?.abort();
     };
   }, []);
 
@@ -31,21 +38,129 @@ export function VoiceRecorder({ onSave, isAnalyzing = false }: VoiceRecorderProp
     return MOCK_TRANSCRIPTS[Math.floor(Math.random() * MOCK_TRANSCRIPTS.length)];
   }
 
-  async function finishRecording() {
+  async function saveTranscript(transcript: string, isMock = false) {
+    const cleanTranscript = transcript.trim();
+
+    if (!cleanTranscript) {
+      setRecorderMessage("Non ho rilevato parole. Riprova o usa il testo manuale.");
+      return;
+    }
+
+    setLastTranscript(cleanTranscript);
+    setRecorderMessage(
+      isMock
+        ? "Browser non compatibile: ho salvato una trascrizione demo."
+        : "Trascrizione vocale salvata."
+    );
+    await onSave(cleanTranscript);
+  }
+
+  async function finishMockRecording() {
     if (timerRef.current) {
       window.clearTimeout(timerRef.current);
     }
 
     const transcript = createMockTranscript();
     setIsRecording(false);
-    setLastTranscript(transcript);
-    await onSave(transcript);
+    setLiveTranscript("");
+    await saveTranscript(transcript, true);
+  }
+
+  async function finishRecording() {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      return;
+    }
+
+    await finishMockRecording();
   }
 
   function startRecording() {
+    const SpeechRecognition =
+      window.SpeechRecognition ?? window.webkitSpeechRecognition;
+
     setIsRecording(true);
     setLastTranscript(null);
-    timerRef.current = window.setTimeout(finishRecording, 2800);
+    setLiveTranscript("");
+    setRecorderMessage(null);
+    finalTranscriptRef.current = "";
+    liveTranscriptRef.current = "";
+    shouldSaveOnEndRef.current = true;
+
+    if (!SpeechRecognition) {
+      timerRef.current = window.setTimeout(finishMockRecording, 2800);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+    recognition.lang = "it-IT";
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = (event) => {
+      let finalText = "";
+      let interimText = "";
+
+      for (let index = 0; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        const transcript = result[0].transcript;
+
+        if (result.isFinal) {
+          finalText += transcript;
+        } else {
+          interimText += transcript;
+        }
+      }
+
+      if (finalText.trim()) {
+        finalTranscriptRef.current = `${finalTranscriptRef.current} ${finalText}`.trim();
+      }
+
+      setLiveTranscript(
+        `${finalTranscriptRef.current} ${interimText}`.replace(/\s+/g, " ").trim()
+      );
+      liveTranscriptRef.current = `${finalTranscriptRef.current} ${interimText}`
+        .replace(/\s+/g, " ")
+        .trim();
+    };
+
+    recognition.onerror = (event) => {
+      shouldSaveOnEndRef.current = false;
+      setIsRecording(false);
+      setLiveTranscript("");
+      recognitionRef.current = null;
+
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        setRecorderMessage("Microfono non autorizzato. Consenti il microfono dal browser.");
+        return;
+      }
+
+      setRecorderMessage("Non sono riuscito ad ascoltare. Puoi riprovare o scrivere il testo.");
+    };
+
+    recognition.onend = () => {
+      if (!shouldSaveOnEndRef.current) {
+        recognitionRef.current = null;
+        return;
+      }
+
+      const transcript = finalTranscriptRef.current || liveTranscriptRef.current;
+      shouldSaveOnEndRef.current = false;
+      recognitionRef.current = null;
+      setIsRecording(false);
+      setLiveTranscript("");
+      void saveTranscript(transcript);
+    };
+
+    try {
+      recognition.start();
+    } catch {
+      setIsRecording(false);
+      recognitionRef.current = null;
+      setRecorderMessage("Il registratore e' gia' attivo. Attendi un secondo e riprova.");
+    }
   }
 
   async function handleManualSubmit(event: FormEvent<HTMLFormElement>) {
@@ -93,20 +208,33 @@ export function VoiceRecorder({ onSave, isAnalyzing = false }: VoiceRecorderProp
         }`}
       >
         {isRecording ? <Square size={20} /> : <Mic size={20} />}
-        {isRecording ? "Termina" : isAnalyzing ? "Analisi in corso..." : "Registra pensiero"}
+        {isRecording ? "Termina e salva" : isAnalyzing ? "Analisi in corso..." : "Registra pensiero"}
       </button>
 
       <div className="mt-4 min-h-6 text-sm text-ink-500">
         {isRecording && (
-          <span className="inline-flex items-center gap-2">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
-            Registrazione in corso...
-          </span>
+          <div className="space-y-2">
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
+              Sto ascoltando...
+            </span>
+            {liveTranscript && (
+              <p className="rounded-2xl bg-ink-50 px-4 py-3 text-sm leading-6 text-ink-700">
+                {liveTranscript}
+              </p>
+            )}
+          </div>
         )}
         {!isRecording && lastTranscript && (
           <span className="inline-flex items-center gap-2">
             <Wand2 size={16} className="text-mint-700" />
-            Trascrizione simulata salvata.
+            {recorderMessage ?? "Trascrizione salvata."}
+          </span>
+        )}
+        {!isRecording && !lastTranscript && recorderMessage && (
+          <span className="inline-flex items-center gap-2 text-amber-700">
+            <AlertCircle size={16} />
+            {recorderMessage}
           </span>
         )}
         {!isRecording && isAnalyzing && (
