@@ -1,0 +1,21 @@
+{
+  "name": "Parla",
+  "short_name": "Parla",
+  "description": "Trasforma pensieri vocali in task, idee e promemoria automaticamente.",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f6f7f9",
+  "theme_color": "#111827",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "lang": "it"
+}
